@@ -3,8 +3,13 @@ import { ThemedText, ThemedView } from './components';
 import { useThemeColor } from './hooks';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+type Feature = {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  description: string;
+};
 
-const mainFeatures = [
+const mainFeatures: Feature[] = [
   {
     icon: 'bulb-outline',
     title: 'Análise Inteligente',
@@ -22,7 +27,7 @@ const mainFeatures = [
   },
 ];
 
-const secondaryFeatures = [
+const secondaryFeatures: Feature[] = [
     {
         icon: 'speedometer-outline',
         title: 'Início Rápido',
@@ -61,9 +66,9 @@ export default function App() {
   const boxBackgroundColor = useThemeColor({}, 'boxBackground');
   const iconColor = useThemeColor({}, 'icon');
 
-  const FeatureBox = ({ feature }: { feature: typeof mainFeatures[0] }) => (
+  const FeatureBox = ({ feature }: { feature: Feature }) => (
     <View style={[styles.boxInfo, { backgroundColor: boxBackgroundColor }]}>
-      <Ionicons name={feature.icon as any} size={32} color={primaryColor} style={styles.icon} />
+      <Ionicons name={feature.icon} size={32} color={primaryColor} style={styles.icon} />
       <ThemedText type="subtitle" style={{ color: primaryColor }}>{feature.title}</ThemedText>
       <ThemedText style={styles.boxText}>{feature.description}</ThemedText>
     </View>

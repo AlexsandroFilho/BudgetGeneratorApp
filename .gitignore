@@ -96,3 +96,74 @@ ehthumbs.db
 *.tsbuildinfo
 # Relatório de contribuições
 CONTRIBUICOES.md
+
+# ------------------------------------
+# 6. ARQUIVOS DE BUILD E CACHE
+# ------------------------------------
+# Build
+/build/
+/.build/
+/out/
+/dist/
+
+# Cache
+.cache/
+.tmp/
+.temp/
+
+# ------------------------------------
+# 7. CONFIGURAÇÕES DE IDE ESPECÍFICAS
+# ------------------------------------
+# WebStorm
+.idea/
+*.iml
+*.iws
+.idea_modules/
+
+# VS Code (permitindo algumas configurações compartilhadas)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# ------------------------------------
+# 8. DEPENDÊNCIAS E LOGS ESPECÍFICOS
+# ------------------------------------
+# Expo
+.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+*.log
+
+# Metro bundler
+.metro-health-check*
+.metro/
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output/
+junit.xml
+
+# ------------------------------------
+# 9. ARQUIVOS DE SISTEMA ADICIONAIS
+# ------------------------------------
+# Windows
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Thumbnails
+._*
