@@ -60,47 +60,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         checkAuth()
     }, [checkAuth])
 
-  const login = useCallback(async (email: string, password: string) => {
-    try {
-      setIsLoading(true)
-      setError(null)
+    const login = useCallback(async (email: string, password: string) => {
+        try {
+            setIsLoading(true)
+            setError(null)
 
-      const response = await authService.login(email, password)
+            const response = await authService.login(email, password)
 
-      await AsyncStorage.setItem(STORAGE_KEY, response.token)
-      await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user))
+            await AsyncStorage.setItem(STORAGE_KEY, response.token)
+            await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user))
 
-      setToken(response.token)
-      setUser(response.user)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao fazer login'
-      setError(errorMessage)
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+            setToken(response.token)
+            setUser(response.user)
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Erro ao fazer login'
+            setError(errorMessage)
+            throw err
+        } finally {
+            setIsLoading(false)
+        }
+    }, [])
 
-  const register = useCallback(async (name: string, email: string, password: string) => {
-    try {
-      setIsLoading(true)
-      setError(null)
+    const register = useCallback(async (name: string, email: string, password: string) => {
+        try {
+            setIsLoading(true)
+            setError(null)
 
-      const response = await authService.register(name, email, password)
+            const response = await authService.register(name, email, password)
 
-      await AsyncStorage.setItem(STORAGE_KEY, response.token)
-      await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user))
+            await AsyncStorage.setItem(STORAGE_KEY, response.token)
+            await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user))
 
-      setToken(response.token)
-      setUser(response.user)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao registrar'
-      setError(errorMessage)
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+            setToken(response.token)
+            setUser(response.user)
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Erro ao registrar'
+            setError(errorMessage)
+            throw err
+        } finally {
+            setIsLoading(false)
+        }
+    }, [])
 
     const logout = useCallback(async () => {
         try {

@@ -5,34 +5,34 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
 
 // Componentes e Hooks
-import { ThemedText, ThemedView } from '../../components'; 
+import { ThemedText, ThemedView } from '../../components';
 import { useThemeColor } from '../../hooks';
 import { useAuth } from '../../context/AuthContext';
 import { FeatureBox } from '../../components/FeatureBox';
 import { AuthModal } from './components/AuthModal';
 
 // Dados e Estilos
-import { mainFeatures, secondaryFeatures } from './IntroData'; 
-import { styles } from './InstroStyle'; 
+import { mainFeatures, secondaryFeatures } from './IntroData';
+import { styles } from './InstroStyle';
 
 // Navegação
-import { StackScreenProps } from '@react-navigation/stack'; 
-import { RootStackParamList } from '../../navigation/AppNavigator'; 
+import { StackScreenProps } from '@react-navigation/stack';
+import { RootStackParamList } from '../../navigation/AppNavigator';
 
 type IntroScreenProps = StackScreenProps<RootStackParamList, 'Intro'>;
 
-export const IntroScreen = (props: IntroScreenProps) => { 
+export const IntroScreen = (props: IntroScreenProps) => {
   const { navigation } = props;
   const [modalVisible, setModalVisible] = useState(false);
   const { isLoading } = useAuth();
-    
+
   const primaryColor = useThemeColor({}, 'primary');
   const buttonColor = useThemeColor({}, 'button');
   const navBackgroundColor = useThemeColor({}, 'boxBackground');
   const backgroundColor = useThemeColor({}, 'background');
 
   const insets = useSafeAreaInsets();
-  
+
   const handleStart = () => {
     setModalVisible(true);
   };
@@ -55,7 +55,7 @@ export const IntroScreen = (props: IntroScreenProps) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        
+
         <View style={styles.headerSection}>
           <ThemedText type="title" style={[styles.title, { color: primaryColor }]}>
             Gere Orçamentos Profissionais com IA
@@ -70,14 +70,14 @@ export const IntroScreen = (props: IntroScreenProps) => {
             <FeatureBox key={`main-${index}`} feature={feature} />
           ))}
         </View>
-        
+
         <View style={styles.secondarySection}>
-            <ThemedText type="title" style={[styles.sectionTitle, { color: primaryColor }]}>
-                Por que escolher nossa plataforma?
-            </ThemedText>
-            {secondaryFeatures.map((feature, index) => (
-                <FeatureBox key={`secondary-${index}`} feature={feature} />
-            ))}
+          <ThemedText type="title" style={[styles.sectionTitle, { color: primaryColor }]}>
+            Por que escolher nossa plataforma?
+          </ThemedText>
+          {secondaryFeatures.map((feature, index) => (
+            <FeatureBox key={`secondary-${index}`} feature={feature} />
+          ))}
         </View>
 
       </ScrollView>

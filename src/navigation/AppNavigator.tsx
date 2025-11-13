@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { ActivityIndicator, View } from 'react-native';
 // 1. Importamos os dois fluxos de navegação que criamos
-import { AppStack, AppStackParamList } from './AppStack'; 
+import { AppStack, AppStackParamList } from './AppStack';
 import { AuthNavigator, AuthStackParamList } from './AuthNavigator';
 import { useAuth } from '../context/AuthContext';
 
@@ -28,7 +28,7 @@ export const AppNavigator = () => {
   return (
     <NavigationContainer>
       {/* 3. O 'coração' do seu app: decide qual fluxo mostrar */}
-      {token 
+      {token
         ? <AppStack />      // Usuário logado: Mostra o App (Orçamentos)
         : <AuthNavigator /> // Usuário deslogado: Mostra o Fluxo de Autenticação (Intro/Login)
       }
