@@ -2,20 +2,22 @@ import { useColorScheme } from 'react-native';
 
 const Colors = {
   light: {
-    text: '#000',
-    background: '#fff',
-    primary: '#007AFF',
-    secondary: '#5856D6',
-    boxBackground: '#F5F5F5',
-    icon: '#2C2C2C'
+    text: '#101B11', // Verde-preto para texto
+    background: '#F8F9FA', // Cinza claro, similar ao da web
+    primary: '#228F2F', // Verde-vivo
+    secondary: '#5856D6', // Manter por enquanto ou escolher um tom complementar
+    boxBackground: '#BCDBBC', // Verde-claro
+    icon: '#113815', // Verde-escuro para ícones
+    button: '#113815', // Verde-escuro para botões
   },
   dark: {
-    text: '#fff',
-    background: '#000',
-    primary: '#0A84FF',
+    text: '#EAEAEA',
+    background: '#101B11', // Verde-preto para fundo
+    primary: '#228F2F', // Verde-vivo
     secondary: '#5E5CE6',
-    boxBackground: '#1C1C1E',
-    icon: '#FFFFFF'
+    boxBackground: '#1C2A1D', // Um verde bem escuro para as caixas
+    icon: '#FFFFFF',
+    button: '#BCDBBC', // Botão claro no tema escuro
   },
 };
 

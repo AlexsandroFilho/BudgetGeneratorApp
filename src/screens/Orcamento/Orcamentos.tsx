@@ -17,9 +17,9 @@ const MOCK_BUDGETS: Budget[] = [
 ];
 
 
-
+// Apenas uma função normal, recebendo 'item' como argumento tipado
 const BudgetItem = ({ item }: { item: Budget }) => ( 
-
+  // Usa a tipagem em linha ou interface separada
   <TouchableOpacity style={styles.itemContainer} 
     onPress={() => console.log(`Abrir detalhes do orçamento: ${item.name}`)}>
     
@@ -28,22 +28,11 @@ const BudgetItem = ({ item }: { item: Budget }) => (
   </TouchableOpacity>
 );
 
-
+// Apenas uma função normal, sem tipagem extra do React
 export const OrcamentosScreen = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.headerTitle}>Meus Orçamentos</Text>
-      
-      <FlatList
-        data={MOCK_BUDGETS}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <BudgetItem item={item} />}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={() => (
-          <Text style={styles.emptyText}>Nenhum orçamento encontrado.</Text>
-        )}
-      />
-      
+      {/* ... o restante do código da sua tela ... */}
     </View>
   );
 };
@@ -93,7 +82,7 @@ const styles = StyleSheet.create({
   valueText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#28a745', 
+    color: '#28a745', // Cor verde para valor
   },
   emptyText: {
     textAlign: 'center',

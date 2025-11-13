@@ -18,6 +18,7 @@ export type AuthStackParamList = {
   Cadastro: undefined; // Tela futura
 };
 
+// 3. O restante do código (já está correto)
 
 const AuthStack = createStackNavigator<AuthStackParamList>();
 
@@ -27,7 +28,7 @@ export const AuthNavigator = () => {
       {/* Tela atual de introdução, que será sua tela de destino para Login/Cadastro */}
       <AuthStack.Screen
         name="Intro"
-        component={IntroScreen}
+        component={IntroScreen} // <-- O erro some com a importação acima
         options={{ headerShown: false }}
       />
       {/* Telas futuras:

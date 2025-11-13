@@ -51,5 +51,29 @@ export const styles = StyleSheet.create({
       textAlign: 'center',
       marginBottom: 24,
       fontSize: 28,
-  }
+  },
+  // --- NAVBAR STYLES ---
+  navbar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  navbarTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  navbarButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  navbarButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });

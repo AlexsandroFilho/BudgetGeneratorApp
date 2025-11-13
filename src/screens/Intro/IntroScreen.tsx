@@ -1,8 +1,9 @@
 // src/screens/Intro/IntroScreen.tsx
 
-import React from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, View, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Importar useSafeAreaInsets
 
+// Componentes e Hooks
 import { ThemedText, ThemedView } from '../../components'; 
 import { useThemeColor } from '../../hooks';
 import { FeatureBox } from '../../components/FeatureBox'; 
@@ -11,29 +12,35 @@ import { FeatureBox } from '../../components/FeatureBox';
 import { mainFeatures, secondaryFeatures } from './IntroData'; 
 import { styles } from './InstroStyle'; 
 
-// Navegação (MANTEMOS AS IMPORTAÇÕES para futuras necessidades)
+// Navegação
 import { StackScreenProps } from '@react-navigation/stack'; 
 import { RootStackParamList } from '../../navigation/AppNavigator'; 
-import { Button } from 'react-native'; 
-
 
 type IntroScreenProps = StackScreenProps<RootStackParamList, 'Intro'>;
 
-
 export const IntroScreen = (props: IntroScreenProps) => { 
-
   const { navigation } = props;
     
   const primaryColor = useThemeColor({}, 'primary');
-  
-  // Função para testar a navegação
-  const handleStart = () => {
+  const buttonColor = useThemeColor({}, 'button');
+  const navBackgroundColor = useThemeColor({}, 'boxBackground');
+  const backgroundColor = useThemeColor({}, 'background');
 
-    console.log("Navegar para Login ou Orçamentos");
+  const insets = useSafeAreaInsets();
+  
+  const handleStart = () => {
+    console.log("Navegar para Login");
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, { backgroundColor }]}>
+      <View style={[styles.navbar, { backgroundColor: navBackgroundColor, paddingTop: insets.top }]}>
+        <ThemedText type="title" style={styles.navbarTitle}>BudgetGenerator</ThemedText>
+        <TouchableOpacity style={[styles.navbarButton, { backgroundColor: buttonColor }]} onPress={handleStart}>
+          <ThemedText style={styles.navbarButtonText}>Entrar</ThemedText>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         
         <View style={styles.headerSection}>
@@ -59,12 +66,6 @@ export const IntroScreen = (props: IntroScreenProps) => {
                 <FeatureBox key={`secondary-${index}`} feature={feature} />
             ))}
         </View>
-
-        {/* Adicione um botão para iniciar o fluxo */}
-        <Button 
-          title="Começar / Fazer Login" 
-          onPress={handleStart} 
-        />
 
       </ScrollView>
     </ThemedView>
