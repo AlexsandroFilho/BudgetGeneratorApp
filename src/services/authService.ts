@@ -72,6 +72,73 @@ export const authService = {
         }
     },
 
+    async getProfile(token: string): Promise<User> {
+        try {
+            const response = await fetch(`${API_BASE_URL}/users/profile`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Erro ao buscar perfil do usuário');
+            }
+
+            const userProfile = await response.json();
+            return userProfile;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Erro ao buscar perfil';
+            throw new Error(errorMessage);
+        }
+    },
+
+    async updateProfile(token: string, data: { name?: string; email?: string; password?: string }): Promise<User> {
+        try {
+            const response = await fetch(`${API_BASE_URL}/users/profile`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Erro ao atualizar perfil');
+            }
+
+            // O backend deve retornar o usuário atualizado
+            const updatedUser = await response.json();
+            return updatedUser;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar perfil';
+            throw new Error(errorMessage);
+        }
+    },
+
+    async deleteAccount(token: string): Promise<void> {
+        try {
+            const response = await fetch(`${API_BASE_URL}/users/profile`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Erro ao excluir conta');
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Erro ao excluir conta';
+            throw new Error(errorMessage);
+        }
+    },
+
     async register(name: string, email: string, password: string): Promise<RegisterResponse> {
         try {
             if (USE_MOCK_API) {

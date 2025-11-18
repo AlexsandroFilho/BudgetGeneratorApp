@@ -19,6 +19,7 @@ export interface AuthContextType {
     logout: () => Promise<void>
     clearError: () => void
     checkAuth: () => Promise<void>
+    refreshUser: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -65,16 +66,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsLoading(true)
             setError(null)
 
-            const response = await authService.login(email, password)
+            // 1. Fazer o login para obter o token
+            const loginResponse = await authService.login(email, password)
+            const { token } = loginResponse;
 
-            await AsyncStorage.setItem(STORAGE_KEY, response.token)
-            await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user))
+            // 2. Usar o token para buscar o perfil completo do usuário
+            const userProfile = await authService.getProfile(token);
 
-            setToken(response.token)
-            setUser(response.user)
+            // 3. Salvar o token e o perfil COMPLETO no AsyncStorage
+            await AsyncStorage.setItem(STORAGE_KEY, token)
+            await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userProfile))
+
+            // 4. Atualizar o estado do contexto com os dados corretos
+            setToken(token)
+            setUser(userProfile)
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Erro ao fazer login'
             setError(errorMessage)
+            // Limpar dados antigos em caso de erro de login
+            await AsyncStorage.removeItem(STORAGE_KEY);
+            await AsyncStorage.removeItem(USER_STORAGE_KEY);
+            setToken(null);
+            setUser(null);
             throw err
         } finally {
             setIsLoading(false)
@@ -125,6 +138,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setError(null)
     }, [])
 
+    const refreshUser = useCallback(async () => {
+        if (!token) return;
+        try {
+            const updatedUser = await authService.getProfile(token);
+            await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+            setUser(updatedUser);
+        } catch (err) {
+            console.error("Erro ao atualizar dados do usuário:", err);
+            // Opcional: Tratar erro, talvez fazer logout se o token for inválido
+        }
+    }, [token]);
+
     const value: AuthContextType = {
         user,
         token,
@@ -135,6 +160,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         logout,
         clearError,
         checkAuth,
+        refreshUser,
     }
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

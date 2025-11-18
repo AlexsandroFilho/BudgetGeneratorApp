@@ -8,6 +8,7 @@ import {
     TextInput,
     Modal,
     Image,
+    ActivityIndicator,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -18,6 +19,7 @@ import { useThemeColor } from '../../hooks'
 import { useAuth } from '../../context/AuthContext'
 import { StackScreenProps } from '@react-navigation/stack'
 import { AppStackParamList } from '../../navigation/AppStack'
+import { authService } from '../../services/authService'
 
 type HomeScreenProps = StackScreenProps<AppStackParamList, 'Home'>
 
@@ -203,13 +205,15 @@ const styles = StyleSheet.create({
     editModal: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'flex-end',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
     },
     editModalContent: {
         backgroundColor: '#fff',
-        borderTopLeftRadius: 16,
-        borderTopRightRadius: 16,
+        borderRadius: 16,
         padding: 20,
+        width: '100%',
         maxHeight: '90%',
     },
     editModalTitle: {
@@ -217,6 +221,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#228F2F',
         marginBottom: 16,
+        textAlign: 'center',
     },
     photoSection: {
         alignItems: 'center',
@@ -299,6 +304,9 @@ const styles = StyleSheet.create({
     formButtonCancel: {
         backgroundColor: '#ddd',
     },
+    formButtonDelete: {
+        backgroundColor: '#c0392b',
+    },
     formButtonText: {
         fontWeight: '600',
         fontSize: 14,
@@ -323,52 +331,53 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlign: 'center',
     },
+    deleteSection: {
+        marginTop: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
+        paddingTop: 15,
+    },
 })
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const [activeTab, setActiveTab] = useState<'perfil' | 'orcamentos'>('perfil')
     const [showEditModal, setShowEditModal] = useState(false)
+    const [editName, setEditName] = useState('')
     const [editEmail, setEditEmail] = useState('')
     const [editPassword, setEditPassword] = useState('')
     const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
     const [focusedInput, setFocusedInput] = useState<string | null>(null)
     const [budgets, setBudgets] = useState<any[]>([])
+    const [isSaving, setIsSaving] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deletePassword, setDeletePassword] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    const primaryColor = useThemeColor({}, 'primary')
-    const backgroundColor = useThemeColor({}, 'background')
     const insets = useSafeAreaInsets()
-    const { user, logout } = useAuth()
+    const { user, logout, token, refreshUser } = useAuth()
 
-    // Carregar foto salva ao montar o componente
     useEffect(() => {
-        loadSavedPhoto()
-    }, [user?.id])
+        if (user?.id) {
+            loadSavedPhoto()
+        }
+    }, [user?.id]);
+
+    const openEditModal = () => {
+        setEditName(user?.name || '');
+        setEditEmail(user?.email || '');
+        setEditPassword('');
+        setShowEditModal(true);
+    }
 
     const loadSavedPhoto = async () => {
         try {
             const photoPath = await AsyncStorage.getItem(`userPhoto_${user?.id}`)
-            if (photoPath) {
-                setProfilePhoto(photoPath)
-            }
-        } catch (error) {
-            console.error('Erro ao carregar foto:', error)
-        }
-    }
-
-    const deleteOldPhoto = async () => {
-        try {
-            await AsyncStorage.removeItem(`userPhoto_${user?.id}`)
-        } catch (error) {
-            console.error('Erro ao deletar foto antiga:', error)
-        }
+            if (photoPath) setProfilePhoto(photoPath)
+        } catch (error) { console.error('Erro ao carregar foto:', error) }
     }
 
     const savePhotoToStorage = async (photoUri: string) => {
         try {
-            // Deletar foto antiga primeiro
-            await deleteOldPhoto()
-
-            // Salvar novo URI no AsyncStorage
             await AsyncStorage.setItem(`userPhoto_${user?.id}`, photoUri)
             setProfilePhoto(photoUri)
         } catch (error) {
@@ -380,103 +389,130 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const handleLogout = () => {
         Alert.alert('Sair', 'Deseja realmente sair?', [
             { text: 'Cancelar', style: 'cancel' },
-            {
-                text: 'Sair',
-                onPress: async () => {
-                    await logout()
-                },
-                style: 'destructive',
-            },
+            { text: 'Sair', onPress: async () => { await logout() }, style: 'destructive' },
         ])
     }
 
-    const handleGenerateBudget = () => {
-        navigation.navigate('Orcamentos')
-    }
+    const handleGenerateBudget = () => navigation.navigate('Orcamentos');
 
     const pickImageFromGallery = async () => {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('Permissão negada', 'É necessário permissão para acessar a galeria')
-            return
+            Alert.alert('Permissão negada', 'É necessário permissão para acessar a galeria');
+            return;
         }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-        })
-
+        const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
         if (!result.canceled && result.assets[0]) {
-            await savePhotoToStorage(result.assets[0].uri)
+            await savePhotoToStorage(result.assets[0].uri);
         }
     }
 
     const takePhotoWithCamera = async () => {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync()
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('Permissão negada', 'É necessário permissão para usar a câmera')
-            return
+            Alert.alert('Permissão negada', 'É necessário permissão para usar a câmera');
+            return;
         }
-
-        const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-        })
-
+        const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.8 });
         if (!result.canceled && result.assets[0]) {
-            await savePhotoToStorage(result.assets[0].uri)
+            await savePhotoToStorage(result.assets[0].uri);
         }
     }
 
-    const handleSaveProfile = () => {
-        // TODO: Implementar API call para salvar dados + upload de foto
-        Alert.alert('Sucesso', 'Dados atualizados com sucesso!')
-        setShowEditModal(false)
-        setEditEmail('')
-        setEditPassword('')
+    const handleSaveProfile = async () => {
+        if (!editName) {
+            Alert.alert('Erro', 'O nome não pode ficar em branco.');
+            return;
+        }
+        if (!token) {
+            Alert.alert('Erro', 'Você não está autenticado.');
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const payload: { name?: string; email?: string; password?: string } = {};
+            if (editName !== user?.name) payload.name = editName;
+            if (editEmail && editEmail !== user?.email) payload.email = editEmail;
+            if (editPassword) payload.password = editPassword;
+
+            if (Object.keys(payload).length === 0) {
+                setShowEditModal(false);
+                return;
+            }
+            await authService.updateProfile(token, payload);
+            await refreshUser();
+            Alert.alert('Sucesso', 'Seu perfil foi atualizado.');
+            setShowEditModal(false);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.';
+            Alert.alert('Erro ao Salvar', errorMessage);
+        } finally {
+            setIsSaving(false);
+        }
     }
+
+    const handleDeletePress = () => {
+        setShowEditModal(false);
+        Alert.alert(
+            'Excluir Conta',
+            'Você tem certeza? Esta ação é irreversível e todos os seus dados, incluindo orçamentos, serão perdidos.',
+            [
+                { text: 'Cancelar', style: 'cancel', onPress: () => setShowEditModal(true) },
+                { text: 'Sim, excluir', style: 'destructive', onPress: () => setShowDeleteModal(true) },
+            ]
+        );
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deletePassword) {
+            Alert.alert('Erro', 'Por favor, insira sua senha para confirmar.');
+            return;
+        }
+        if (!user?.email || !token) {
+            Alert.alert('Erro', 'Não foi possível verificar sua identidade.');
+            return;
+        }
+
+        setIsDeleting(true);
+        try {
+            await authService.login(user.email, deletePassword);
+            await authService.deleteAccount(token);
+            Alert.alert('Conta Excluída', 'Sua conta foi excluída com sucesso.');
+            setShowDeleteModal(false);
+            await logout();
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.';
+            Alert.alert('Erro', `Não foi possível excluir a conta: ${errorMessage}`);
+        } finally {
+            setIsDeleting(false);
+            setDeletePassword('');
+        }
+    };
 
     const renderPerfilTab = () => (
         <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.profileCard}>
                 <View style={styles.profileImage}>
-                    {profilePhoto ? (
-                        <Image source={{ uri: profilePhoto }} style={styles.profileImagePhoto} />
-                    ) : (
-                        <Ionicons name="person-circle" size={90} color="#228F2F" />
-                    )}
+                    {profilePhoto ? <Image source={{ uri: profilePhoto }} style={styles.profileImagePhoto} /> : <Ionicons name="person-circle" size={90} color="#228F2F" />}
                 </View>
                 <ThemedText style={styles.profileName}>{user?.name || 'Usuário'}</ThemedText>
                 <ThemedText style={styles.profileEmail}>{user?.email || 'email@example.com'}</ThemedText>
-
                 <View style={styles.profileButtonGroup}>
-                    <TouchableOpacity
-                        style={[styles.profileButton, { backgroundColor: '#228F2F' }]}
-                        onPress={() => setShowEditModal(true)}
-                    >
+                    <TouchableOpacity style={[styles.profileButton]} onPress={openEditModal}>
                         <Ionicons name="pencil" size={16} color="#fff" />
-                        <ThemedText style={[styles.profileButtonText, { marginTop: 2 }]}>
-                            Editar
-                        </ThemedText>
+                        <ThemedText style={[styles.profileButtonText, { marginTop: 2 }]}>Editar</ThemedText>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.profileButton, { backgroundColor: '#ff6b6b' }]}
-                        onPress={handleLogout}
-                    >
+                    <TouchableOpacity style={[styles.profileButton, { backgroundColor: '#ff6b6b' }]} onPress={handleLogout}>
                         <Ionicons name="log-out" size={16} color="#fff" />
                         <ThemedText style={[styles.profileButtonText, { marginTop: 2 }]}>Sair</ThemedText>
                     </TouchableOpacity>
                 </View>
             </View>
-
             <TouchableOpacity style={styles.ctaButton} onPress={handleGenerateBudget}>
                 <ThemedText style={styles.ctaButtonText}>➕ Gerar Novo Orçamento</ThemedText>
             </TouchableOpacity>
         </ScrollView>
-    )
+    );
 
     const renderOrcamentosTab = () => (
         <View style={{ flex: 1 }}>
@@ -485,9 +521,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     <View style={styles.budgetEmpty}>
                         <Ionicons name="document-outline" size={48} color="#ccc" />
                         <ThemedText style={styles.budgetEmptyText}>Nenhum orçamento gerado</ThemedText>
-                        <ThemedText style={[styles.budgetEmptyText, { marginTop: 8 }]}>
-                            Clique no botão abaixo para criar o seu primeiro orçamento
-                        </ThemedText>
                     </View>
                 ) : (
                     <ScrollView showsVerticalScrollIndicator={false}>
@@ -495,36 +528,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                             <View key={index} style={styles.budgetItem}>
                                 <View style={styles.budgetItemContent}>
                                     <ThemedText style={styles.budgetItemTitle}>{budget.name}</ThemedText>
-                                    <ThemedText style={styles.budgetItemDate}>
-                                        {new Date(budget.date || Date.now()).toLocaleDateString('pt-BR')}
-                                    </ThemedText>
+                                    <ThemedText style={styles.budgetItemDate}>{new Date(budget.date || Date.now()).toLocaleDateString('pt-BR')}</ThemedText>
                                 </View>
                                 <View style={styles.budgetItemAction}>
-                                    <TouchableOpacity>
-                                        <Ionicons name="eye" size={20} color="#228F2F" />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity>
-                                        <Ionicons name="trash" size={20} color="#ff6b6b" />
-                                    </TouchableOpacity>
+                                    <TouchableOpacity><Ionicons name="eye" size={20} color="#228F2F" /></TouchableOpacity>
+                                    <TouchableOpacity><Ionicons name="trash" size={20} color="#ff6b6b" /></TouchableOpacity>
                                 </View>
                             </View>
                         ))}
                     </ScrollView>
                 )}
             </View>
-
-            <TouchableOpacity
-                style={[styles.ctaButton, { marginBottom: 70 }]}
-                onPress={handleGenerateBudget}
-            >
+            <TouchableOpacity style={[styles.ctaButton, { marginBottom: 70 }]} onPress={handleGenerateBudget}>
                 <ThemedText style={styles.ctaButtonText}>➕ Gerar Novo Orçamento</ThemedText>
             </TouchableOpacity>
         </View>
-    )
+    );
 
     return (
-        <ThemedView style={[styles.container, { backgroundColor }]}>
-            {/* Header */}
+        <ThemedView style={[{ flex: 1 }]}>
             <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
                 <ThemedText style={styles.headerBrand}>BudgetGenerator</ThemedText>
                 <View style={styles.headerActions}>
@@ -533,124 +555,95 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     </TouchableOpacity>
                 </View>
             </View>
-
-            {/* Content */}
             <View style={styles.content}>
                 {activeTab === 'perfil' ? renderPerfilTab() : renderOrcamentosTab()}
             </View>
-
-            {/* Bottom Navigation */}
             <View style={[styles.bottomNav, { paddingBottom: insets.bottom }]}>
-                <TouchableOpacity
-                    style={[styles.navItem, activeTab === 'perfil' && styles.navItemActive]}
-                    onPress={() => setActiveTab('perfil')}
-                >
-                    <Ionicons
-                        name="person"
-                        size={24}
-                        color={activeTab === 'perfil' ? '#228F2F' : '#666'}
-                    />
-                    <ThemedText style={[styles.navText, activeTab === 'perfil' && styles.navTextActive]}>
-                        Perfil
-                    </ThemedText>
+                <TouchableOpacity style={[styles.navItem, activeTab === 'perfil' && styles.navItemActive]} onPress={() => setActiveTab('perfil')}>
+                    <Ionicons name="person" size={24} color={activeTab === 'perfil' ? '#228F2F' : '#666'} />
+                    <ThemedText style={[styles.navText, activeTab === 'perfil' && styles.navTextActive]}>Perfil</ThemedText>
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[styles.navItem, activeTab === 'orcamentos' && styles.navItemActive]}
-                    onPress={() => setActiveTab('orcamentos')}
-                >
-                    <Ionicons
-                        name="document-text"
-                        size={24}
-                        color={activeTab === 'orcamentos' ? '#228F2F' : '#666'}
-                    />
-                    <ThemedText style={[styles.navText, activeTab === 'orcamentos' && styles.navTextActive]}>
-                        Orçamentos
-                    </ThemedText>
+                <TouchableOpacity style={[styles.navItem, activeTab === 'orcamentos' && styles.navItemActive]} onPress={() => setActiveTab('orcamentos')}>
+                    <Ionicons name="document-text" size={24} color={activeTab === 'orcamentos' ? '#228F2F' : '#666'} />
+                    <ThemedText style={[styles.navText, activeTab === 'orcamentos' && styles.navTextActive]}>Orçamentos</ThemedText>
                 </TouchableOpacity>
             </View>
 
             {/* Edit Modal */}
-            <Modal visible={showEditModal} transparent animationType="slide">
+            <Modal visible={showEditModal} transparent animationType="slide" onRequestClose={() => setShowEditModal(false)}>
                 <View style={styles.editModal}>
                     <View style={styles.editModalContent}>
                         <ScrollView showsVerticalScrollIndicator={false}>
                             <ThemedText style={styles.editModalTitle}>Alterar Dados da Conta</ThemedText>
-
-                            {/* Foto Section */}
                             <View style={styles.photoSection}>
                                 <View style={styles.photoPreview}>
-                                    {profilePhoto ? (
-                                        <Image source={{ uri: profilePhoto }} style={styles.photoPreviewImage} />
-                                    ) : (
-                                        <Ionicons name="image-outline" size={40} color="#999" />
-                                    )}
+                                    {profilePhoto ? <Image source={{ uri: profilePhoto }} style={styles.photoPreviewImage} /> : <Ionicons name="image-outline" size={40} color="#999" />}
                                 </View>
-
                                 <View style={styles.photoButtonGroup}>
-                                    <TouchableOpacity style={styles.photoButton} onPress={takePhotoWithCamera}>
-                                        <Ionicons name="camera" size={14} color="#333" />
-                                        <ThemedText style={styles.photoButtonText}>Câmera</ThemedText>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.photoButton} onPress={pickImageFromGallery}>
-                                        <Ionicons name="image" size={14} color="#333" />
-                                        <ThemedText style={styles.photoButtonText}>Galeria</ThemedText>
-                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.photoButton} onPress={takePhotoWithCamera}><Ionicons name="camera" size={14} color="#333" /><ThemedText style={styles.photoButtonText}>Câmera</ThemedText></TouchableOpacity>
+                                    <TouchableOpacity style={styles.photoButton} onPress={pickImageFromGallery}><Ionicons name="image" size={14} color="#333" /><ThemedText style={styles.photoButtonText}>Galeria</ThemedText></TouchableOpacity>
                                 </View>
                             </View>
-
-                            {/* Email Input */}
+                            <ThemedText style={styles.inputLabel}>Nome</ThemedText>
+                            <TextInput
+                                style={[
+                                    styles.input,
+                                    focusedInput === 'name' && styles.inputFocused,
+                                    { backgroundColor: '#f0f0f0' } // Adicionado para indicar campo não editável
+                                ]}
+                                placeholder="Digite seu nome completo"
+                                placeholderTextColor="#999"
+                                value={editName}
+                                editable={false} // Campo não editável
+                                onChangeText={setEditName}
+                                onFocus={() => setFocusedInput('name')}
+                                onBlur={() => setFocusedInput(null)}
+                            />
                             <ThemedText style={styles.inputLabel}>Novo E-mail</ThemedText>
-                            <TextInput
-                                style={[
-                                    styles.input,
-                                    focusedInput === 'email' && styles.inputFocused,
-                                ]}
-                                placeholder="Digite o novo e-mail"
-                                placeholderTextColor="#999"
-                                keyboardType="email-address"
-                                value={editEmail}
-                                onChangeText={setEditEmail}
-                                onFocus={() => setFocusedInput('email')}
-                                onBlur={() => setFocusedInput(null)}
-                            />
-
-                            {/* Password Input */}
+                            <TextInput style={[styles.input, focusedInput === 'email' && styles.inputFocused]} placeholder="Digite o novo e-mail" keyboardType="email-address" value={editEmail} onChangeText={setEditEmail} onFocus={() => setFocusedInput('email')} onBlur={() => setFocusedInput(null)} />
                             <ThemedText style={styles.inputLabel}>Nova Senha (deixe em branco para não alterar)</ThemedText>
-                            <TextInput
-                                style={[
-                                    styles.input,
-                                    focusedInput === 'password' && styles.inputFocused,
-                                ]}
-                                placeholder="Digite a nova senha"
-                                placeholderTextColor="#999"
-                                secureTextEntry
-                                value={editPassword}
-                                onChangeText={setEditPassword}
-                                onFocus={() => setFocusedInput('password')}
-                                onBlur={() => setFocusedInput(null)}
-                            />
-
-                            {/* Form Buttons */}
+                            <TextInput style={[styles.input, focusedInput === 'password' && styles.inputFocused]} placeholder="Digite a nova senha" secureTextEntry value={editPassword} onChangeText={setEditPassword} onFocus={() => setFocusedInput('password')} onBlur={() => setFocusedInput(null)} />
                             <View style={styles.formButtons}>
-                                <TouchableOpacity
-                                    style={[styles.formButton, styles.formButtonSave]}
-                                    onPress={handleSaveProfile}
-                                >
-                                    <ThemedText style={[styles.formButtonText, styles.formButtonSaveText]}>
-                                        Salvar
-                                    </ThemedText>
+                                <TouchableOpacity style={[styles.formButton, styles.formButtonSave, isSaving && { backgroundColor: '#ccc' }]} onPress={handleSaveProfile} disabled={isSaving}>
+                                    {isSaving ? <ActivityIndicator color="#fff" /> : <ThemedText style={[styles.formButtonText, styles.formButtonSaveText]}>Salvar</ThemedText>}
                                 </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.formButton, styles.formButtonCancel]}
-                                    onPress={() => setShowEditModal(false)}
-                                >
-                                    <ThemedText style={[styles.formButtonText, styles.formButtonCancelText]}>
-                                        Cancelar
-                                    </ThemedText>
+                                <TouchableOpacity style={[styles.formButton, styles.formButtonCancel]} onPress={() => setShowEditModal(false)} disabled={isSaving}>
+                                    <ThemedText style={[styles.formButtonText, styles.formButtonCancelText]}>Cancelar</ThemedText>
+                                </TouchableOpacity>
+                            </View>
+                            <View style={styles.deleteSection}>
+                                <TouchableOpacity style={[styles.formButton, styles.formButtonDelete]} onPress={handleDeletePress} disabled={isSaving}>
+                                    <ThemedText style={[styles.formButtonText, { color: '#fff' }]}>Excluir Conta</ThemedText>
                                 </TouchableOpacity>
                             </View>
                         </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Delete Confirmation Modal */}
+            <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
+                <View style={styles.editModal}>
+                    <View style={styles.editModalContent}>
+                        <ThemedText style={styles.editModalTitle}>Confirmar Exclusão</ThemedText>
+                        <ThemedText style={{ marginBottom: 15, textAlign: 'center', color: '#333' }}>Para confirmar a exclusão permanente da sua conta, por favor, digite sua senha atual.</ThemedText>
+                        <TextInput
+                            style={[styles.input, focusedInput === 'deletePass' && styles.inputFocused]}
+                            placeholder="Sua senha atual"
+                            secureTextEntry
+                            value={deletePassword}
+                            onChangeText={setDeletePassword}
+                            onFocus={() => setFocusedInput('deletePass')}
+                            onBlur={() => setFocusedInput(null)}
+                        />
+                        <View style={styles.formButtons}>
+                            <TouchableOpacity style={[styles.formButton, styles.formButtonDelete, isDeleting && { backgroundColor: '#ccc' }]} onPress={handleConfirmDelete} disabled={isDeleting}>
+                                {isDeleting ? <ActivityIndicator color="#fff" /> : <ThemedText style={[styles.formButtonText, { color: '#fff' }]}>Confirmar e Excluir</ThemedText>}
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.formButton, styles.formButtonCancel]} onPress={() => setShowDeleteModal(false)} disabled={isDeleting}>
+                                <ThemedText style={[styles.formButtonText, styles.formButtonCancelText]}>Cancelar</ThemedText>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
             </Modal>
