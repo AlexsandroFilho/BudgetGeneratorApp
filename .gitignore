@@ -173,19 +173,14 @@ $RECYCLE.BIN/
 MINHAS_CONTRIBUICOES.md
 
 # ------------------------------------
-# 11. REGRAS IMPORTADAS DO BudgetGeneratorWEB
+# 11. IGNORAR PASTAS DE BACKEND (NÃO COMMITAR)
 # ------------------------------------
-/BudgetGeneratorWEB/node_modules/
-/BudgetGeneratorWEB/venv/
-/BudgetGeneratorWEB/.env/
-/BudgetGeneratorWEB/dist/
-/BudgetGeneratorWEB/build/
-/BudgetGeneratorWEB/coverage/
-/BudgetGeneratorWEB/package-lock.json
-/BudgetGeneratorWEB/yarn.lock
-/BudgetGeneratorWEB/*.log
-/BudgetGeneratorWEB/*.sqlite3
-/BudgetGeneratorWEB/*.db
-/BudgetGeneratorWEB/.env
-/BudgetGeneratorWEB/.env.*local
-/BudgetGeneratorWEB/css_backup/
+/BudgetGeneratorWEB
+/BudgetGeneratorWEB/
+BudgetGeneratorWEB/
+/BudgetGenerator-V2
+/BudgetGenerator-V2/
+BudgetGenerator-V2/
+/backend
+/backend/
+backend/
