@@ -30,7 +30,17 @@ const serviceInitialState = {
 };
 
 // --- Componentes de Formulário (Refatorados) ---
-const ProductForm = ({ data, setData }) => (
+type ProductFormProps = {
+    data: typeof productInitialState;
+    setData: (data: typeof productInitialState) => void;
+};
+
+type ServiceFormProps = {
+    data: typeof serviceInitialState;
+    setData: (data: typeof serviceInitialState) => void;
+};
+
+const ProductForm = ({ data, setData }: ProductFormProps) => (
     <View style={styles.section}>
         <Text style={styles.sectionTitle}>Orçamento de Produto</Text>
         <TextInput style={styles.input} placeholder="Nome do Produto *" value={data.nomeProduto} onChangeText={v => setData({ ...data, nomeProduto: v })} />
@@ -47,7 +57,7 @@ const ProductForm = ({ data, setData }) => (
     </View>
 );
 
-const ServiceForm = ({ data, setData }) => (
+const ServiceForm = ({ data, setData }: ServiceFormProps) => (
     <View style={styles.section}>
         <Text style={styles.sectionTitle}>Orçamento de Serviço</Text>
         <TextInput style={styles.input} placeholder="Nome do Serviço *" value={data.nomeServico} onChangeText={v => setData({ ...data, nomeServico: v })} />
@@ -84,13 +94,25 @@ export const OrcamentosScreen = () => {
             ? ['nomeProduto', 'custoProducao', 'materiaisUtilizados', 'margemLucro', 'horas', 'valorHora']
             : ['nomeServico', 'valorBase', 'horasEstimadas', 'materiaisServico', 'custoServico', 'lucroServico'];
 
-        if (requiredFields.some(field => !data[field])) {
+        // Type casting para validar campos
+        if (requiredFields.some(field => {
+            const value = (data as any)[field];
+            return !value;
+        })) {
             Alert.alert('Erro', 'Por favor, preencha todos os campos obrigatórios (*).');
+            return;
+        }
+
+        if (!token) {
+            Alert.alert('Erro', 'Você precisa estar autenticado para gerar um orçamento.');
             return;
         }
 
         setIsLoading(true);
         try {
+            console.log('🔗 URL:', `${API_BASE_URL}/orcamento`);
+            console.log('� Enviando dados:', data);
+
             const response = await fetch(`${API_BASE_URL}/orcamento`, {
                 method: 'POST',
                 headers: {
@@ -100,18 +122,25 @@ export const OrcamentosScreen = () => {
                 body: JSON.stringify(data),
             });
 
+            console.log('📥 Response Status:', response.status);
+            console.log('📥 Response OK:', response.ok);
+
             const result = await response.json();
+            console.log('📥 Response JSON:', result);
 
             if (!response.ok) {
-                throw new Error(result.erro || 'Erro ao gerar orçamento.');
+                console.error('❌ Erro HTTP:', result);
+                throw new Error(result.erro || result.error || 'Erro ao gerar orçamento');
             }
 
+            console.log('✅ Sucesso!');
             setResultText(result.resposta);
             setShowResultModal(true);
 
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.';
-            Alert.alert('Erro na API', errorMessage);
+            console.error('🚨 ERRO:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+            Alert.alert('Erro ao Gerar Orçamento', errorMessage);
         } finally {
             setIsLoading(false);
         }
