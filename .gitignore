@@ -30,8 +30,12 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# local env files - NUNCA comitar arquivos com chaves API ou secrets
+.env
+.env.local
+.env.*.local
+.env.production.local
+.env.development.local
 
 # typescript
 *.tsbuildinfo
@@ -44,7 +48,7 @@ yarn-error.*
 # 1. DEPENDÊNCIAS DE NODE E LOGS
 # ------------------------------------
 /node_modules
-/package-lock.json # Remova se usar yarn!
+package-lock.json
 /yarn.lock         # Remova se usar npm!
 /npm-debug.log*
 /yarn-error.log*
@@ -53,6 +57,7 @@ yarn-error.*
 # Se você tiver chaves ou variáveis de ambiente sensíveis
 .env
 .env.local
+.gitignore
 
 # ------------------------------------
 # 2. ARQUIVOS DO REACT NATIVE / EXPO
@@ -175,12 +180,6 @@ MINHAS_CONTRIBUICOES.md
 # ------------------------------------
 # 11. IGNORAR PASTAS DE BACKEND (NÃO COMMITAR)
 # ------------------------------------
-/BudgetGeneratorWEB
-/BudgetGeneratorWEB/
 BudgetGeneratorWEB/
-/BudgetGenerator-V2
-/BudgetGenerator-V2/
 BudgetGenerator-V2/
-/backend
-/backend/
 backend/

@@ -66,20 +66,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsLoading(true)
             setError(null)
 
-            // 1. Fazer o login para obter o token
+            // Fazer o login para obter o token e os dados do usuário
             const loginResponse = await authService.login(email, password)
-            const { token } = loginResponse;
+            const { token, user } = loginResponse;
 
-            // 2. Usar o token para buscar o perfil completo do usuário
-            const userProfile = await authService.getProfile(token);
+            console.log('✅ [AuthContext.login] Token recebido:', token?.substring(0, 20) + '...')
+            console.log('✅ [AuthContext.login] User:', user)
 
-            // 3. Salvar o token e o perfil COMPLETO no AsyncStorage
+            // Salvar o token e o usuário no AsyncStorage
             await AsyncStorage.setItem(STORAGE_KEY, token)
-            await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userProfile))
+            await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user))
 
-            // 4. Atualizar o estado do contexto com os dados corretos
+            console.log('✅ [AuthContext.login] Dados salvos no AsyncStorage')
+
+            // Atualizar o estado do contexto
             setToken(token)
-            setUser(userProfile)
+            setUser(user)
+
+            console.log('✅ [AuthContext.login] Estado atualizado. Token no state:', token?.substring(0, 20) + '...')
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Erro ao fazer login'
             setError(errorMessage)

@@ -58,6 +58,8 @@ export const authService = {
             }
 
             const data = await response.json()
+            console.log('✅ [authService.login] Response recebido:', data)
+            console.log('✅ [authService.login] Token:', data.token?.substring(0, 20) + '...')
             return {
                 token: data.token,
                 user: {
