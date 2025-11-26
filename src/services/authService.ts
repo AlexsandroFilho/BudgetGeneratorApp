@@ -231,4 +231,34 @@ export const authService = {
             throw new Error('Token inválido ou expirado')
         }
     },
+
+    async refreshToken(token: string): Promise<string> {
+        try {
+            if (USE_MOCK_API) {
+                // Mock: gera novo token
+                return `mock_token_${Date.now()}`
+            }
+
+            const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            })
+
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.message || 'Não foi possível renovar o token')
+            }
+
+            const data = await response.json()
+            console.log('✅ [authService.refreshToken] Novo token gerado com sucesso')
+            console.log('✅ [authService.refreshToken] Novo token:', data.token?.substring(0, 20) + '...')
+            return data.token
+        } catch (error) {
+            console.error('❌ [authService.refreshToken] Erro ao renovar token:', error)
+            throw new Error('Falha ao renovar o token')
+        }
+    },
 }

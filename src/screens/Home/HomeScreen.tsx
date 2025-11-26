@@ -9,6 +9,8 @@ import {
     Modal,
     Image,
     ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -20,6 +22,8 @@ import { useAuth } from '../../context/AuthContext'
 import { StackScreenProps } from '@react-navigation/stack'
 import { AppStackParamList } from '../../navigation/AppStack'
 import { authService } from '../../services/authService'
+import { API_BASE_URL } from '@env'
+import budgetListService, { Budget } from '../../services/budgetListService'
 
 type HomeScreenProps = StackScreenProps<AppStackParamList, 'Home'>
 
@@ -212,16 +216,22 @@ const styles = StyleSheet.create({
     editModalContent: {
         backgroundColor: '#fff',
         borderRadius: 16,
-        padding: 20,
+        overflow: 'hidden',
         width: '100%',
         maxHeight: '90%',
     },
-    editModalTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#228F2F',
-        marginBottom: 16,
-        textAlign: 'center',
+    editModalHeader: {
+        backgroundColor: '#228F2F',
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+    },
+    editModalInner: {
+        padding: 20,
+        paddingBottom: 80,
     },
     photoSection: {
         alignItems: 'center',
@@ -268,17 +278,18 @@ const styles = StyleSheet.create({
         color: '#333',
     },
     input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
+        borderWidth: 2,
+        borderColor: '#eee',
         borderRadius: 8,
         paddingHorizontal: 12,
         paddingVertical: 10,
         marginBottom: 12,
         fontSize: 14,
-        backgroundColor: '#fff',
+        backgroundColor: '#fafafa',
     },
     inputFocused: {
         borderColor: '#228F2F',
+        backgroundColor: '#fff',
     },
     inputLabel: {
         fontSize: 12,
@@ -288,8 +299,9 @@ const styles = StyleSheet.create({
     },
     formButtons: {
         flexDirection: 'row',
-        gap: 8,
+        gap: 12,
         marginTop: 16,
+        marginBottom: 16,
     },
     formButton: {
         flex: 1,
@@ -302,10 +314,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#228F2F',
     },
     formButtonCancel: {
-        backgroundColor: '#ddd',
+        backgroundColor: '#f0f0f0',
     },
     formButtonDelete: {
-        backgroundColor: '#c0392b',
+        backgroundColor: '#ffebee',
+        borderWidth: 1.5,
+        borderColor: '#ef5350',
     },
     formButtonText: {
         fontWeight: '600',
@@ -333,9 +347,9 @@ const styles = StyleSheet.create({
     },
     deleteSection: {
         marginTop: 20,
+        paddingTop: 15,
         borderTopWidth: 1,
         borderTopColor: '#eee',
-        paddingTop: 15,
     },
 })
 
@@ -352,6 +366,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deletePassword, setDeletePassword] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isLoadingBudgets, setIsLoadingBudgets] = useState(false);
+    const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
+    const [showBudgetDetailModal, setShowBudgetDetailModal] = useState(false);
+    const [isEditingBudget, setIsEditingBudget] = useState(false);
+    const [editedResposta, setEditedResposta] = useState('');
+    const [currentBudgetPage, setCurrentBudgetPage] = useState(1);
+    const budgetItemsPerPage = 5;
 
     const insets = useSafeAreaInsets()
     const { user, logout, token, refreshUser } = useAuth()
@@ -361,6 +382,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             loadSavedPhoto()
         }
     }, [user?.id]);
+
+    useEffect(() => {
+        if (activeTab === 'orcamentos' && token) {
+            loadBudgets()
+        }
+    }, [activeTab, token]);
 
     const openEditModal = () => {
         setEditName(user?.name || '');
@@ -489,6 +516,81 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         }
     };
 
+    const loadBudgets = async () => {
+        if (!token) return;
+        setIsLoadingBudgets(true);
+        try {
+            const data = await budgetListService.fetchBudgets(token);
+            setBudgets(data);
+            setCurrentBudgetPage(1);
+        } catch (error) {
+            console.error('Erro ao carregar orçamentos:', error);
+        } finally {
+            setIsLoadingBudgets(false);
+        }
+    };
+
+    const handleViewBudget = (budget: Budget) => {
+        setSelectedBudget(budget);
+        setEditedResposta(budget.resposta);
+        setIsEditingBudget(false);
+        setShowBudgetDetailModal(true);
+    };
+
+    const handleSaveBudgetEdit = async () => {
+        if (!selectedBudget || !token) return;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/orcamento/${selectedBudget.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    resposta: editedResposta,
+                    tipo: selectedBudget.tipo,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao salvar alterações');
+            }
+
+            Alert.alert('Sucesso', 'Orçamento atualizado com sucesso!');
+            setIsEditingBudget(false);
+            loadBudgets();
+            setShowBudgetDetailModal(false);
+        } catch (error) {
+            Alert.alert('Erro', 'Não foi possível salvar as alterações.');
+            console.error('Erro ao salvar:', error);
+        }
+    };
+
+    const handleDeleteBudgetAction = async (id: number, tipo: 'produto' | 'servico') => {
+        Alert.alert(
+            'Confirmar Exclusão',
+            'Tem certeza que deseja excluir este orçamento?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            if (!token) return;
+                            await budgetListService.deleteBudget(token, id, tipo);
+                            Alert.alert('Sucesso', 'Orçamento excluído com sucesso!');
+                            loadBudgets();
+                        } catch (error) {
+                            Alert.alert('Erro', 'Não foi possível excluir o orçamento.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     const renderPerfilTab = () => (
         <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.profileCard}>
@@ -517,26 +619,60 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const renderOrcamentosTab = () => (
         <View style={{ flex: 1 }}>
             <View style={styles.budgetsContainer}>
-                {budgets.length === 0 ? (
+                {isLoadingBudgets ? (
+                    <View style={styles.budgetEmpty}>
+                        <ActivityIndicator size="large" color="#228F2F" />
+                        <ThemedText style={styles.budgetEmptyText}>Carregando orçamentos...</ThemedText>
+                    </View>
+                ) : budgets.length === 0 ? (
                     <View style={styles.budgetEmpty}>
                         <Ionicons name="document-outline" size={48} color="#ccc" />
                         <ThemedText style={styles.budgetEmptyText}>Nenhum orçamento gerado</ThemedText>
                     </View>
                 ) : (
-                    <ScrollView showsVerticalScrollIndicator={false}>
-                        {budgets.map((budget, index) => (
-                            <View key={index} style={styles.budgetItem}>
-                                <View style={styles.budgetItemContent}>
-                                    <ThemedText style={styles.budgetItemTitle}>{budget.name}</ThemedText>
-                                    <ThemedText style={styles.budgetItemDate}>{new Date(budget.date || Date.now()).toLocaleDateString('pt-BR')}</ThemedText>
+                    <View style={{ flex: 1, flexDirection: 'column' }}>
+                        <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+                            {budgets.slice((currentBudgetPage - 1) * budgetItemsPerPage, currentBudgetPage * budgetItemsPerPage).map((budget, index) => (
+                                <View key={index} style={styles.budgetItem}>
+                                    <View style={styles.budgetItemContent}>
+                                        <ThemedText style={styles.budgetItemTitle}>{budget.nome}</ThemedText>
+                                        <ThemedText style={styles.budgetItemDate}>
+                                            {new Date(budget.data).toLocaleDateString('pt-BR')} • {budget.tipo === 'produto' ? '📦 Produto' : '🔧 Serviço'}
+                                        </ThemedText>
+                                    </View>
+                                    <View style={styles.budgetItemAction}>
+                                        <TouchableOpacity onPress={() => handleViewBudget(budget)}>
+                                            <Ionicons name="pencil" size={20} color="#228F2F" />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => handleDeleteBudgetAction(budget.id, budget.tipo)}>
+                                            <Ionicons name="trash" size={20} color="#ff6b6b" />
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
-                                <View style={styles.budgetItemAction}>
-                                    <TouchableOpacity><Ionicons name="eye" size={20} color="#228F2F" /></TouchableOpacity>
-                                    <TouchableOpacity><Ionicons name="trash" size={20} color="#ff6b6b" /></TouchableOpacity>
-                                </View>
+                            ))}
+                        </ScrollView>
+                        {budgets.length > budgetItemsPerPage && (
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, marginTop: 10, borderTopWidth: 1, borderTopColor: '#ddd' }}>
+                                <TouchableOpacity
+                                    style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: currentBudgetPage > 1 ? '#228F2F' : '#ccc', borderRadius: 6 }}
+                                    onPress={() => setCurrentBudgetPage(currentBudgetPage - 1)}
+                                    disabled={currentBudgetPage <= 1}
+                                >
+                                    <ThemedText style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>← Anterior</ThemedText>
+                                </TouchableOpacity>
+                                <ThemedText style={{ fontSize: 12, fontWeight: '600', color: '#666' }}>
+                                    Página {currentBudgetPage} de {Math.ceil(budgets.length / budgetItemsPerPage)} ({budgets.length})
+                                </ThemedText>
+                                <TouchableOpacity
+                                    style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: currentBudgetPage < Math.ceil(budgets.length / budgetItemsPerPage) ? '#228F2F' : '#ccc', borderRadius: 6 }}
+                                    onPress={() => setCurrentBudgetPage(currentBudgetPage + 1)}
+                                    disabled={currentBudgetPage >= Math.ceil(budgets.length / budgetItemsPerPage)}
+                                >
+                                    <ThemedText style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Próxima →</ThemedText>
+                                </TouchableOpacity>
                             </View>
-                        ))}
-                    </ScrollView>
+                        )}
+                    </View>
                 )}
             </View>
             <TouchableOpacity style={[styles.ctaButton, { marginBottom: 70 }]} onPress={handleGenerateBudget}>
@@ -571,10 +707,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
             {/* Edit Modal */}
             <Modal visible={showEditModal} transparent animationType="slide" onRequestClose={() => setShowEditModal(false)}>
-                <View style={styles.editModal}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.editModal}>
                     <View style={styles.editModalContent}>
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            <ThemedText style={styles.editModalTitle}>Alterar Dados da Conta</ThemedText>
+                        <View style={styles.editModalHeader}>
+                            <Ionicons name="person-circle" size={28} color="#fff" />
+                            <ThemedText style={{ fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 0 }}>Alterar Dados</ThemedText>
+                        </View>
+                        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.editModalInner}>
                             <View style={styles.photoSection}>
                                 <View style={styles.photoPreview}>
                                     {profilePhoto ? <Image source={{ uri: profilePhoto }} style={styles.photoPreviewImage} /> : <Ionicons name="image-outline" size={40} color="#999" />}
@@ -589,7 +728,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                                 style={[
                                     styles.input,
                                     focusedInput === 'name' && styles.inputFocused,
-                                    { backgroundColor: '#f0f0f0' } // Adicionado para indicar campo não editável
                                 ]}
                                 placeholder="Digite seu nome completo"
                                 placeholderTextColor="#999"
@@ -618,14 +756,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                             </View>
                         </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* Delete Confirmation Modal */}
             <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
                 <View style={styles.editModal}>
                     <View style={styles.editModalContent}>
-                        <ThemedText style={styles.editModalTitle}>Confirmar Exclusão</ThemedText>
+                        <ThemedText style={{ fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 15, textAlign: 'center' }}>Confirmar Exclusão</ThemedText>
                         <ThemedText style={{ marginBottom: 15, textAlign: 'center', color: '#333' }}>Para confirmar a exclusão permanente da sua conta, por favor, digite sua senha atual.</ThemedText>
                         <TextInput
                             style={[styles.input, focusedInput === 'deletePass' && styles.inputFocused]}
@@ -646,6 +784,84 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                         </View>
                     </View>
                 </View>
+            </Modal>
+
+            {/* Modal de Detalhes do Orçamento */}
+            <Modal visible={showBudgetDetailModal} transparent animationType="slide">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                >
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                        <View style={{ backgroundColor: 'white', borderRadius: 12, padding: 20, width: '95%', height: '75%', flexDirection: 'column' }}>
+                            <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                    <ThemedText style={{ fontSize: 16, fontWeight: 'bold', color: '#228F2F' }}>{selectedBudget?.nome}</ThemedText>
+                                    <TouchableOpacity onPress={() => setShowBudgetDetailModal(false)}>
+                                        <Ionicons name="close-outline" size={22} color="#333" />
+                                    </TouchableOpacity>
+                                </View>
+                                {isEditingBudget ? (
+                                    <>
+                                        <ThemedText style={{ fontSize: 12, fontWeight: '600', marginBottom: 8, color: '#666' }}>Editar Orçamento:</ThemedText>
+                                        <TextInput
+                                            style={{ flex: 1, backgroundColor: '#f0f0f0', borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 15, paddingVertical: 12, fontSize: 13, textAlignVertical: 'top', marginBottom: 0 }}
+                                            multiline
+                                            value={editedResposta}
+                                            onChangeText={setEditedResposta}
+                                            placeholder="Edite o conteúdo do orçamento..."
+                                            scrollEnabled
+                                        />
+                                    </>
+                                ) : (
+                                    <ScrollView style={{ flex: 1, marginBottom: 8 }}>
+                                        <ThemedText style={{ fontSize: 13, lineHeight: 22, color: '#333', marginBottom: 0 }}>{selectedBudget?.resposta}</ThemedText>
+                                    </ScrollView>
+                                )}
+                            </View>
+                            <View style={{ flexDirection: 'row', gap: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#eee' }}>
+                                {isEditingBudget ? (
+                                    <>
+                                        <TouchableOpacity
+                                            style={{ flex: 1, backgroundColor: '#4CAF50', paddingVertical: 12, borderRadius: 8, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6 }}
+                                            onPress={handleSaveBudgetEdit}
+                                        >
+                                            <Ionicons name="checkmark-outline" size={14} color="#fff" />
+                                            <ThemedText style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Salvar</ThemedText>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={{ flex: 1, backgroundColor: '#f44336', paddingVertical: 12, borderRadius: 8, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6 }}
+                                            onPress={() => {
+                                                setIsEditingBudget(false);
+                                                setEditedResposta(selectedBudget?.resposta || '');
+                                            }}
+                                        >
+                                            <Ionicons name="close-outline" size={14} color="#fff" />
+                                            <ThemedText style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Cancelar</ThemedText>
+                                        </TouchableOpacity>
+                                    </>
+                                ) : (
+                                    <>
+                                        <TouchableOpacity
+                                            style={{ flex: 1, backgroundColor: '#228F2F', paddingVertical: 12, borderRadius: 8, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6 }}
+                                            onPress={() => setIsEditingBudget(true)}
+                                        >
+                                            <Ionicons name="pencil-outline" size={14} color="#fff" />
+                                            <ThemedText style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Editar</ThemedText>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={{ flex: 1, backgroundColor: '#666', paddingVertical: 12, borderRadius: 8, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6 }}
+                                            onPress={() => setShowBudgetDetailModal(false)}
+                                        >
+                                            <Ionicons name="close-outline" size={14} color="#fff" />
+                                            <ThemedText style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Fechar</ThemedText>
+                                        </TouchableOpacity>
+                                    </>
+                                )}
+                            </View>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
             </Modal>
         </ThemedView>
     )

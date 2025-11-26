@@ -20,6 +20,7 @@ export interface AuthContextType {
     clearError: () => void
     checkAuth: () => Promise<void>
     refreshUser: () => Promise<void>
+    refreshToken: () => Promise<string>
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -154,6 +155,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     }, [token]);
 
+    const refreshTokenHandler = useCallback(async (): Promise<string> => {
+        if (!token) {
+            throw new Error('Nenhum token para renovar');
+        }
+        try {
+            console.log('🔄 [AuthContext.refreshTokenHandler] Tentando renovar token...');
+            const newToken = await authService.refreshToken(token);
+
+            console.log('✅ [AuthContext.refreshTokenHandler] Token renovado com sucesso');
+            console.log('✅ [AuthContext.refreshTokenHandler] Novo token:', newToken?.substring(0, 20) + '...');
+
+            // Salvar o novo token no AsyncStorage
+            await AsyncStorage.setItem(STORAGE_KEY, newToken);
+
+            // Atualizar o estado
+            setToken(newToken);
+            setError(null);
+
+            return newToken;
+        } catch (err) {
+            console.error('❌ [AuthContext.refreshTokenHandler] Erro ao renovar token:', err);
+            // Se não conseguir renovar, fazer logout
+            await logout();
+            setError('Sessão expirada. Por favor, faça login novamente.');
+            throw err;
+        }
+    }, [token]);
+
     const value: AuthContextType = {
         user,
         token,
@@ -165,6 +194,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         clearError,
         checkAuth,
         refreshUser,
+        refreshToken: refreshTokenHandler,
     }
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -177,6 +177,10 @@ $RECYCLE.BIN/
 # MINHAS_CONTRIBUICOES.md - Apenas para seu portfólio pessoal (NÃO commitar)
 MINHAS_CONTRIBUICOES.md
 
+# Ignorar todos os arquivos markdown
+*.md
+!README.md
+
 # ------------------------------------
 # 11. IGNORAR PASTAS DE BACKEND (NÃO COMMITAR)
 # ------------------------------------
